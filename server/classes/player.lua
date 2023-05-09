@@ -22,19 +22,20 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 	end
 
 	self.setCoords = function(coords)
-		self.updateCoords(coords)
 		self.triggerEvent('esx:teleport', coords)
 	end
 
 	self.updateCoords = function(coords)
 		self.coords = {x = ESX.Math.Round(coords.x, 1), y = ESX.Math.Round(coords.y, 1), z = ESX.Math.Round(coords.z, 1), heading = ESX.Math.Round(coords.heading or 0.0, 1)}
 	end
-
 	self.getCoords = function(vector)
-		if vector then
-			return vector3(self.coords.x, self.coords.y, self.coords.z)
+		local CoordsPlayer = GetEntityCoords(GetPlayerPed(self.source))
+		local Heading = GetEntityHeading(GetPlayerPed(self.source))
+		local Coords = {x = tonumber(string.format("%.1f", CoordsPlayer.x)), y = tonumber(string.format("%.1f", CoordsPlayer.y)), z = tonumber(string.format("%.1f", CoordsPlayer.z)), heading = tonumber(string.format("%.1f", Heading))}
+		if vector then 
+			return vector3(CoordsPlayer.x, CoordsPlayer.y, CoordsPlayer.z)
 		else
-			return self.coords
+			return Coords
 		end
 	end
 

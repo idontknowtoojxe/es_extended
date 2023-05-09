@@ -57,10 +57,10 @@ end
 
 AddEventHandler('playerConnecting', function(name, setCallback, deferrals)
 	deferrals.defer()
-	local playerId, identifier = source
+	local playerId, identifier = source , GetPlayerIdentifiers(playerId)[1]
 	Citizen.Wait(100)
 
-	identifier = GetPlayerIdentifiers(playerId)[1]
+	-- identifier = GetPlayerIdentifiers(playerId)[1]
 
 
 	if identifier then
