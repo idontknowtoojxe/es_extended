@@ -10,134 +10,6 @@ Config.DefaultWeaponTints = {
 }
 
 Config.Weapons = {
-	-- KNUCKLE --
-
-	{
-		name = 'WEAPON_HULK',
-		label = ('HULK'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_SPARTANFUTURE',
-		label = ('SPARTANFUTURE'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_TRISTAR',
-		label = ('TRISTAR'),
-		components = {}
-	},
-	-- WEAPON KNIFE --
-	{
-		name = 'WEAPON_AGENTACE',
-		label = ('AGENTACE'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_CAVALRYBANDIT',
-		label = ('CAVALRYBANDIT'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_DOWNPOUR',
-		label = ('DOWNPOUR'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_FROGMAN',
-		label = ('FROGMAN'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_NOSHHUNTER',
-		label = ('NOSHHUNTER'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_TACTICALRED',
-		label = ('TACTICALRED'),
-		components = {}
-	},
-	
-	-- WEAPON BAT --
-	{
-		name = 'WEAPON_FUZZYBEAR',
-		label = ('FUZZYBEAR'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_MEDIC',
-		label = ('MEDIC'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_MINTMINER',
-		label = ('MINTMINER'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_ROCKSTAR',
-		label = ('ROCKSTAR'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_SCUBA',
-		label = ('SCUBA'),
-		components = {}
-	},
-
-	{
-		name = 'WEAPON_BADASS',
-		label = ('BADASS'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_PARCEL',
-		label = ('PARCEL'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_SANDWICH',
-		label = ('SANDWICH'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_WILD',
-		label = ('WILD'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_WUKONG',
-		label = ('WUKONG'),
-		components = {}
-	},
-
-	{
-		name = 'WEAPON_FANCYCANDY',
-		label = ('FANCYCANDY'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_ICEMAIDEN',
-		label = ('ICEMAIDEN'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_KEG',
-		label = ('KEG'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_MARSHMELLOW',
-		label = ('MARSHMELLOW'),
-		components = {}
-	},
-	{
-		name = 'WEAPON_MECHANICAL',
-		label = ('MECHANICAL'),
-		components = {}
-	},
-	
 	{
 		name = 'WEAPON_PISTOL',
 		label = _U('weapon_pistol'),
@@ -562,6 +434,8 @@ Config.Weapons = {
 
 	{name = 'WEAPON_MINIGUN', label = _U('weapon_minigun'), tints = Config.DefaultWeaponTints, components = {}, ammo = {label = _U('ammo_rounds'), hash = GetHashKey('AMMO_MINIGUN')}},
 	{name = 'WEAPON_RAILGUN', label = _U('weapon_railgun'), tints = Config.DefaultWeaponTints, components = {}, ammo = {label = _U('ammo_rounds'), hash = GetHashKey('AMMO_RAILGUN')}},
+	{name = 'WEAPON_RAYMINIGUN', label = _U('weapon_rayminigun'), tints = Config.DefaultWeaponTints, components = {}, ammo = {label = _U('ammo_rounds'), hash = GetHashKey('AMMO_RAYMINIGUN')}},
+	{name = 'WEAPON_RAYPISTOL', label = _U('weapon_raypistol'), tints = Config.DefaultWeaponTints, components = {}, ammo = {label = _U('ammo_rounds'), hash = GetHashKey('AMMO_RAYPISTOL')}},
 	{name = 'WEAPON_STUNGUN', label = _U('weapon_stungun'), tints = Config.DefaultWeaponTints, components = {}},
 	{name = 'WEAPON_RPG', label = _U('weapon_rpg'), tints = Config.DefaultWeaponTints, components = {}, ammo = {label = _U('ammo_rockets'), hash = GetHashKey('AMMO_RPG')}},
 	{name = 'WEAPON_HOMINGLAUNCHER', label = _U('weapon_hominglauncher'), tints = Config.DefaultWeaponTints, components = {}, ammo = {label = _U('ammo_rockets'), hash = GetHashKey('AMMO_HOMINGLAUNCHER')}},
@@ -588,6 +462,7 @@ Config.Weapons = {
 	{name = 'WEAPON_BAT', label = _U('weapon_bat'), components = {}},
 	{name = 'WEAPON_GOLFCLUB', label = _U('weapon_golfclub'), components = {}},
 	{name = 'WEAPON_CROWBAR', label = _U('weapon_crowbar'), components = {}},
+
 	{name = 'WEAPON_GRENADE', label = _U('weapon_grenade'), components = {}, ammo = {label = _U('ammo_grenade'), hash = GetHashKey('AMMO_GRENADE')}},
 	{name = 'WEAPON_SMOKEGRENADE', label = _U('weapon_smokegrenade'), components = {}, ammo = {label = _U('ammo_smokebomb'), hash = GetHashKey('AMMO_SMOKEGRENADE')}},
 	{name = 'WEAPON_STICKYBOMB', label = _U('weapon_stickybomb'), components = {}, ammo = {label = _U('ammo_stickybomb'), hash = GetHashKey('AMMO_STICKYBOMB')}},
@@ -598,10 +473,24 @@ Config.Weapons = {
 	{name = 'WEAPON_SNOWBALL', label = _U('weapon_snowball'), components = {}, ammo = {label = _U('ammo_snowball'), hash = GetHashKey('AMMO_SNOWBALL')}},
 	{name = 'WEAPON_BALL', label = _U('weapon_ball'), components = {}, ammo = {label = _U('ammo_ball'), hash = GetHashKey('AMMO_BALL')}},
 	{name = 'WEAPON_FLARE', label = _U('weapon_flare'), components = {}, ammo = {label = _U('ammo_flare'), hash = GetHashKey('AMMO_FLARE')}},
-	{name = 'WEAPON_BURGLARM', label = _U('weapon_burglarm'), components = {}},
-	{name = 'WEAPON_GOLDEN', label = _U('weapon_golden'), components = {}},
-	{name = 'WEAPON_LASAGNA', label = _U('weapon_lasagna'), components = {}},
-	{name = 'WEAPON_SANDCASTLE', label = _U('weapon_sandcastle'), components = {}},
-	{name = 'WEAPON_BURGLAR', label = _U('weapon_burglar'), components = {}},
-	{name = 'WEAPON_CUPID',	label = _U('weapon_cupid'),	components = {}}
+
+	{
+		name = 'WEAPON_WATERGUN',
+		label = 'ปืนฉีดน้ำ', 
+		components = {}
+	},
+
+	-- ตีบวก --
+	{name = 'WEAPON_POOLCUELV1', label = 'POOLCUELV.1', components = {}},
+	{name = 'WEAPON_POOLCUELV2', label = 'POOLCUELV.2', components = {}},
+	{name = 'WEAPON_POOLCUELV3', label = 'POOLCUELV.3', components = {}},
+	{name = 'WEAPON_SWITCHBLADELV1', label = 'SWITCHBLADELV.1', components = {}},
+	{name = 'WEAPON_SWITCHBLADELV2', label = 'SWITCHBLADELV.2', components = {}},
+	{name = 'WEAPON_SWITCHBLADELV3', label = 'SWITCHBLADELV.3', components = {}},
+		
+	{name = 'WEAPON_DAGGERLV1', label = 'DAGGERLV.1', components = {}},
+	{name = 'WEAPON_DAGGERLV2', label = 'DAGGERLV.2', components = {}},
+	{name = 'WEAPON_DAGGERLV3', label = 'DAGGERLV.3', components = {}},
+	{name = 'WEAPON_DAGGERLV4', label = 'DAGGERLV.4', components = {}},
+	{name = 'WEAPON_DAGGERLV5', label = 'DAGGERLV.5', components = {}},
 }

@@ -1,6 +1,6 @@
 ESX.Trace = function(msg)
 	if Config.EnableDebug then
-		print(('[^2SupSibz.Base^7] [^2TRACE^7] %s^7'):format(msg))
+		print(('[es_extended] [^2TRACE^7] %s^7'):format(msg))
 	end
 end
 
@@ -30,7 +30,7 @@ ESX.RegisterCommand = function(name, group, cb, allowConsole, suggestion)
 	end
 
 	if ESX.RegisteredCommands[name] then
-		print(('[^2SupSibz.Base^7] [^3WARNING^7] An command "%s" is already registered, overriding command'):format(name))
+		print(('[es_extended] [^3WARNING^7] An command "%s" is already registered, overriding command'):format(name))
 
 		if ESX.RegisteredCommands[name].suggestion then
 			TriggerClientEvent('chat:removeSuggestion', -1, ('/%s'):format(name))
@@ -50,7 +50,7 @@ ESX.RegisterCommand = function(name, group, cb, allowConsole, suggestion)
 		local command = ESX.RegisteredCommands[name]
 
 		if not command.allowConsole and playerId == 0 then
-			print(('[^2SupSibz.Base^7] [^3WARNING^7] %s'):format(_U('commanderror_console')))
+			print(('[es_extended] [^3WARNING^7] %s'):format(_U('commanderror_console')))
 		else
 			local xPlayer, error = ESX.GetPlayerFromId(playerId), nil
 
@@ -122,14 +122,14 @@ ESX.RegisterCommand = function(name, group, cb, allowConsole, suggestion)
 
 			if error then
 				if playerId == 0 then
-					print(('[^2SupSibz.Base^7] [^3WARNING^7] %s^7'):format(error))
+					print(('[es_extended] [^3WARNING^7] %s^7'):format(error))
 				else
 					xPlayer.triggerEvent('chat:addMessage', {args = {'^1SYSTEM', error}})
 				end
 			else
 				cb(xPlayer or false, args, function(msg)
 					if playerId == 0 then
-						print(('[^2SupSibz.Base^7] [^3WARNING^7] %s^7'):format(msg))
+						print(('[es_extended] [^3WARNING^7] %s^7'):format(msg))
 					else
 						xPlayer.triggerEvent('chat:addMessage', {args = {'^1SYSTEM', msg}})
 					end
@@ -151,24 +151,22 @@ ESX.ClearTimeout = function(id)
 	ESX.CancelledTimeouts[id] = true
 end
 
-SetConvarServerInfo("Support", "Player.Setting#5844 | ABC Studio - Dev")
-
 ESX.RegisterServerCallback = function(name, cb)
 	ESX.ServerCallbacks[name] = cb
 end
 
 ESX.TriggerServerCallback = function(name, requestId, source, cb, ...)
-	local playername = GetPlayerName(source)
 	if ESX.ServerCallbacks[name] then
 		ESX.ServerCallbacks[name](source, cb, ...)
-	--	print('^2SupSibz^0.^2Base ^0> ^0: ^0[^1 '..name..' ^0]^0 ')
 	else
-	--	print('Not Fond ServerCallBack Name : [' .. name .. '] does not exist')
+		print(('[es_extended] [^3WARNING^7] Server callback "%s" does not exist. Make sure that the server sided file really is loading, an error in that file might cause it to not load.'):format(name))
 	end
 end
 
 ESX.SavePlayer = function(xPlayer, cb)
 	local asyncTasks = {}
+	local identifiers = GetPlayerIdentifiers(xPlayer)
+
 
 	table.insert(asyncTasks, function(cb2)
 		MySQL.Async.execute('UPDATE users SET accounts = @accounts, job = @job, job_grade = @job_grade, `group` = @group, loadout = @loadout, position = @position, inventory = @inventory WHERE identifier = @identifier', {
@@ -186,7 +184,7 @@ ESX.SavePlayer = function(xPlayer, cb)
 	end)
 
 	Async.parallel(asyncTasks, function(results)
-		print(('[^2SupSibz.Base^7] [^2INFO^7] Saved player "%s^7"'):format(xPlayer.getName()))
+		print(('[^2INFO^7] Saved player ^5"%s^7"'):format(xPlayer.getName()))
 
 		if cb then
 			cb()
@@ -205,7 +203,7 @@ ESX.SavePlayers = function(cb)
 	end
 
 	Async.parallelLimit(asyncTasks, 8, function(results)
-		print(('[^2SupSibz.Base^7] [^2INFO^7] Saved %s player(s)'):format(#xPlayers))
+		print(('[^2INFO^7] Saved ^5"%s^7" player(s)'):format(#xPlayers))
 		if cb then
 			cb()
 		end
@@ -215,10 +213,10 @@ end
 ESX.StartDBSync = function()
 	function saveData()
 		ESX.SavePlayers()
-		SetTimeout(30 * 60 * 1000, saveData)
+		SetTimeout(10 * 60 * 1000, saveData)
 	end
 
-	SetTimeout(30 * 60 * 1000, saveData)
+	SetTimeout(10 * 60 * 1000, saveData)
 end
 
 ESX.GetPlayers = function()
@@ -248,8 +246,10 @@ ESX.RegisterUsableItem = function(item, cb)
 end
 
 ESX.UseItem = function(source, item)
-	if item ~= nil then
+	if ESX.Items[item] then
 		ESX.UsableItemsCallbacks[item](source, item)
+	else
+		print(('[^3WARNING^7] Item ^5"%s"^7 was used but does not exist!'):format(item))
 	end
 end
 
@@ -259,32 +259,25 @@ ESX.GetItemLabel = function(item)
 	end
 end
 
-ESX.CreatePickup = function(type, name, count, label, playerId, components, tintIndex)
-	local pickupId = (ESX.PickupId == 65635 and 0 or ESX.PickupId + 1)
-	local xPlayer = ESX.GetPlayerFromId(playerId)
-	local coords = xPlayer.getCoords()
+-- ESX.CreatePickup = function(type, name, count, label, playerId, components, tintIndex)
+-- 	local pickupId = (ESX.PickupId == 65635 and 0 or ESX.PickupId + 1)
+-- 	local xPlayer = ESX.GetPlayerFromId(playerId)
+-- 	local coords = xPlayer.getCoords()
 
-	ESX.Pickups[pickupId] = {
-		type = type, name = name,
-		count = count, label = label,
-		coords = coords
-	}
+-- 	ESX.Pickups[pickupId] = {
+-- 		type = type, name = name,
+-- 		count = count, label = label,
+-- 		coords = coords
+-- 	}
 
-	if type == 'item_weapon' then
-		ESX.Pickups[pickupId].components = components
-		ESX.Pickups[pickupId].tintIndex = tintIndex
-	end
+-- 	if type == 'item_weapon' then
+-- 		ESX.Pickups[pickupId].components = components
+-- 		ESX.Pickups[pickupId].tintIndex = tintIndex
+-- 	end
 
-	TriggerClientEvent('esx:createPickup', -1, pickupId, label, coords, type, name, components, tintIndex)
-	ESX.PickupId = pickupId
-	
-	SetTimeout(500, function()	-- 5000 = 5วินาที (เวลาปรับเอาเองว่าอยากให้หายตอนไหนหลังจากทิ้ง)
-    	if ESX.Pickups[pickupId] then
-		ESX.Pickups[pickupId] = nil
-        TriggerClientEvent('esx:removePickup', -1, pickupId)
-    	end
-	end)
-end
+-- 	TriggerClientEvent('esx:createPickup', -1, pickupId, label, coords, type, name, components, tintIndex)
+-- 	ESX.PickupId = pickupId
+-- end
 
 ESX.DoesJobExist = function(job, grade)
 	grade = tostring(grade)

@@ -1,27 +1,38 @@
+
+
+
+-- NC PROTECT+
+server_scripts { '@nc_PROTECT+/exports/sv.lua' }
+client_scripts { '@nc_PROTECT+/exports/cl.lua' }
+
+
+
+
 fx_version 'adamant'
 
 game 'gta5'
 
-description 'ES Extended by SupSibz'
+description 'ES Extended'
 
-version '1.2'
+version '1.2.0'
 
 lua54 'yes'
 
 server_scripts {
 	'@async/async.lua',
-	'@awfyldb/lib/MySQL.lua',
+	'@mysql-async/lib/MySQL.lua',
+
 	'locale.lua',
-	-- 'locales/de.lua',
-	-- 'locales/br.lua',
-	-- 'locales/fr.lua',
+	'locales/de.lua',
+	'locales/br.lua',
+	'locales/fr.lua',
 	'locales/en.lua',
-	-- 'locales/fi.lua',
-	-- 'locales/sv.lua',
-	-- 'locales/pl.lua',
-	-- 'locales/cs.lua',
-	-- 'locales/sc.lua',
-	-- 'locales/tc.lua',
+	'locales/fi.lua',
+	'locales/sv.lua',
+	'locales/pl.lua',
+	'locales/cs.lua',
+	'locales/sc.lua',
+	'locales/tc.lua',
 
 	'config.lua',
 	'config.weapons.lua',
@@ -50,16 +61,20 @@ client_scripts {
 	'locales/cs.lua',
 	'locales/sc.lua',
 	'locales/tc.lua',
+
 	'config.lua',
 	'config.weapons.lua',
+
 	'client/common.lua',
 	'client/entityiter.lua',
 	'client/functions.lua',
 	'client/wrapper.lua',
 	'client/main.lua',
+
 	'client/modules/death.lua',
 	'client/modules/scaleform.lua',
 	'client/modules/streaming.lua',
+
 	'common/modules/math.lua',
 	'common/modules/table.lua',
 	'common/functions.lua'
@@ -96,6 +111,6 @@ server_exports {
 }
 
 dependencies {
-	'awfyldb',
+	'mysql-async',
 	'async'
 }

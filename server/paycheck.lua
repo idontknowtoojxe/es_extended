@@ -31,6 +31,8 @@ ESX.StartPayCheck = function()
 					end)
 				else -- generic job
 					xPlayer.addAccountMoney('bank', salary)
+					xPlayer.addInventoryItem('gacha_donateV3', 1)
+					--xPlayer.addInventoryItem('mre', 1)
 					TriggerClientEvent('esx:showAdvancedNotification', xPlayer.source, _U('bank'), _U('received_paycheck'), _U('received_salary', salary), 'CHAR_BANK_MAZE', 9)
 				end
 			end

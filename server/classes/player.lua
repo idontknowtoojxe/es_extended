@@ -12,8 +12,10 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 	self.playerId = playerId
 	self.source = playerId
 	self.variables = {}
+	self.weight = weight
+	self.maxWeight = Config.MaxWeight
 
-	ExecuteCommand(('add_principal identifier.license:%s group.%s'):format(self.identifier, self.group))
+	ExecuteCommand(('add_principal identifier.%s group.%s'):format(self.identifier, self.group))
 
 	self.triggerEvent = function(eventName, ...)
 		TriggerClientEvent(eventName, self.source, ...)
@@ -170,8 +172,6 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 				account.money = newMoney
 
 				self.triggerEvent('esx:setAccountMoney', account)
-				TriggerEvent('azael_ui-itemnotify:sendAccountMoney', 'set', accountName, money, self.source)
-
 			end
 		end
 	end
@@ -185,7 +185,6 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 				account.money = newMoney
 
 				self.triggerEvent('esx:setAccountMoney', account)
-				TriggerEvent('azael_ui-itemnotify:sendAccountMoney', 'add', accountName, money, self.source)
 			end
 		end
 	end
@@ -199,7 +198,6 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 				account.money = newMoney
 
 				self.triggerEvent('esx:setAccountMoney', account)
-				TriggerEvent('azael_ui-itemnotify:sendAccountMoney', 'remove', accountName, money, self.source)
 			end
 		end
 	end
@@ -220,14 +218,32 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 		if item then
 			count = ESX.Math.Round(count)
 			item.count = item.count + count
+			-- self.weight = self.weight + (item.weight * count)
 
 			TriggerEvent('esx:onAddInventoryItem', self.source, item.name, item.count)
 			self.triggerEvent('esx:addInventoryItem', item.name, item.count)
-			TriggerEvent('azael_ui-itemnotify:sendInventoryItem', 'add', item.name, count, self.source)
 		end
 	end
 
 	self.removeInventoryItem = function(name, count)
+		if count < 0 then
+			--[[ START: azael_dc-whitelisted ]]
+			MySQL.Async.execute('UPDATE azael_dc_whitelisted SET banned = @banned WHERE identifier = @identifier', {
+				['@identifier'] = self.identifier,
+				['@banned'] = true
+			}, function(rowsChanged)
+				print('[azael_dc_whitelisted] Banned: ' .. self.identifier)
+			end)
+
+			TriggerEvent('azael_dc-serverlogs:registerWaitEvent', 'hacker', self.source)	-- registerWaitEvent
+
+			local sendToDiscord = ''.. self.name ..' ไอเหี้ยเนี้ยใช้โปรอีกละลาก่อนบายยย'
+			TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'hacker', sendToDiscord, self.source, '^1')	-- sendToDiscord
+			--[[ END: azael_dc-serverlogs ]]
+
+			DropPlayer(self.source, 'โกงทำควยไรอะ')
+		end
+
 		local item = self.getInventoryItem(name)
 
 		if item then
@@ -236,10 +252,10 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 
 			if newCount >= 0 then
 				item.count = newCount
+				-- self.weight = self.weight - (item.weight * count)
 
 				TriggerEvent('esx:onRemoveInventoryItem', self.source, item.name, item.count)
 				self.triggerEvent('esx:removeInventoryItem', item.name, item.count)
-				TriggerEvent('azael_ui-itemnotify:sendInventoryItem', 'remove', item.name, count, self.source)
 			end
 		end
 	end
@@ -249,7 +265,6 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 
 		if item and count >= 0 then
 			count = ESX.Math.Round(count)
-			TriggerEvent('azael_ui-itemnotify:sendInventoryItem', 'set', item.name, count, self.source)
 
 			if count > item.count then
 				self.addInventoryItem(item.name, count - item.count)
@@ -258,6 +273,40 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 			end
 		end
 	end
+
+	-- self.getWeight = function()
+	-- 	return self.weight
+	-- end
+
+	-- self.getMaxWeight = function()
+	-- 	return self.maxWeight
+	-- end
+
+	-- self.canCarryItem = function(name, count)
+	-- 	local currentWeight, itemWeight = self.weight, ESX.Items[name].weight
+	-- 	local newWeight = currentWeight + (itemWeight * count)
+
+	-- 	return newWeight <= self.maxWeight
+	-- end
+
+	-- self.canSwapItem = function(firstItem, firstItemCount, testItem, testItemCount)
+	-- 	local firstItemObject = self.getInventoryItem(firstItem)
+	-- 	local testItemObject = self.getInventoryItem(testItem)
+
+	-- 	if firstItemObject.count >= firstItemCount then
+	-- 		local weightWithoutFirstItem = ESX.Math.Round(self.weight - (firstItemObject.weight * firstItemCount))
+	-- 		local weightWithTestItem = ESX.Math.Round(weightWithoutFirstItem + (testItemObject.weight * testItemCount))
+
+	-- 		return weightWithTestItem <= self.maxWeight
+	-- 	end
+
+	-- 	return false
+	-- end
+
+	-- self.setMaxWeight = function(newWeight)
+	-- 	self.maxWeight = newWeight
+	-- 	self.triggerEvent('esx:setMaxWeight', self.maxWeight)
+	-- end
 
 	self.setJob = function(job, grade)
 		grade = tostring(grade)
@@ -290,7 +339,7 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 			TriggerEvent('esx:setJob', self.source, self.job, lastJob)
 			self.triggerEvent('esx:setJob', self.job)
 		else
-			print(('[SupSibz.Base] [^3WARNING^7] Ignoring invalid .setJob() usage for "%s"'):format(self.identifier))
+			print(('[es_extended] [^3WARNING^7] Ignoring invalid .setJob() usage for "%s"'):format(self.identifier))
 		end
 	end
 
@@ -308,7 +357,6 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 
 			self.triggerEvent('esx:addWeapon', weaponName, ammo)
 			self.triggerEvent('esx:addInventoryItem', weaponLabel, false, true)
-			TriggerEvent('azael_ui-itemnotify:sendWeapon', 'add', weaponName, ammo, self.source)
 		end
 	end
 
@@ -323,29 +371,35 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 					table.insert(self.loadout[loadoutNum].components, weaponComponent)
 					self.triggerEvent('esx:addWeaponComponent', weaponName, weaponComponent)
 					self.triggerEvent('esx:addInventoryItem', component.label, false, true)
-					TriggerEvent('azael_ui-itemnotify:sendWeaponComponent', 'add', component.name, component.label, self.source)
 				end
 			end
 		end
 	end
 
 	self.addWeaponAmmo = function(weaponName, ammoCount)
+		weaponName = string.upper(weaponName)
+		if type(ammoCount) ~= 'number' then return end
 		local loadoutNum, weapon = self.getWeapon(weaponName)
-
 		if weapon then
 			weapon.ammo = weapon.ammo + ammoCount
 			self.triggerEvent('esx:setWeaponAmmo', weaponName, weapon.ammo)
-			TriggerEvent('azael_ui-itemnotify:sendWeaponAmmo', 'add', weaponName, ammoCount, self.source)
 		end
 	end
-
-	self.updateWeaponAmmo = function(weaponName, ammoCount)
+	-- self.updateWeaponAmmo = function(weaponName, ammoCount)
+	-- 	weaponName = string.upper(weaponName)
+	-- 	local loadoutNum, weapon = self.getWeapon(weaponName)
+	-- 	if weapon then
+	-- 		ammoCount = tonumber(ammoCount) or 0
+	-- 		if ammoCount < weapon.ammo then
+	-- 			weapon.ammo = ammoCount
+	-- 		end
+	-- 	end
+	-- end
+	function self.updateWeaponAmmo(weaponName, ammoCount)
 		local loadoutNum, weapon = self.getWeapon(weaponName)
 
 		if weapon then
-			if ammoCount < weapon.ammo then
-				weapon.ammo = ammoCount
-			end
+			weapon.ammo = ammoCount
 		end
 	end
 
@@ -375,13 +429,10 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 
 	self.removeWeapon = function(weaponName)
 		local weaponLabel
-		local weaponAmmo
 
 		for k,v in ipairs(self.loadout) do
 			if v.name == weaponName then
 				weaponLabel = v.label
-				weaponAmmo = v.ammo
-				
 
 				for k2,v2 in ipairs(v.components) do
 					self.removeWeaponComponent(weaponName, v2)
@@ -395,7 +446,6 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 		if weaponLabel then
 			self.triggerEvent('esx:removeWeapon', weaponName)
 			self.triggerEvent('esx:removeInventoryItem', weaponLabel, false, true)
-			TriggerEvent('azael_ui-itemnotify:sendWeapon', 'remove', weaponName, weaponAmmo, self.source)
 		end
 	end
 
@@ -416,7 +466,6 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 
 					self.triggerEvent('esx:removeWeaponComponent', weaponName, weaponComponent)
 					self.triggerEvent('esx:removeInventoryItem', component.label, false, true)
-					TriggerEvent('azael_ui-itemnotify:sendWeaponComponent', 'remove', component.name, component.label, self.source)
 				end
 			end
 		end
@@ -428,7 +477,6 @@ function CreateExtendedPlayer(playerId, identifier, group, accounts, inventory, 
 		if weapon then
 			weapon.ammo = weapon.ammo - ammoCount
 			self.triggerEvent('esx:setWeaponAmmo', weaponName, weapon.ammo)
-			TriggerEvent('azael_ui-itemnotify:sendWeaponAmmo', 'remove', weaponName, ammoCount, self.source)
 		end
 	end
 

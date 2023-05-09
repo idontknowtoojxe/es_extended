@@ -1,3 +1,17 @@
+AddEventHandler("1ST:ClearMemoryServer", function()
+	Citizen.CreateThread(function()
+		local Randomz = math.random(1000, 5000)
+		Wait(Randomz)
+		collectgarbage()
+	end)
+end)
+
+
+Citizen.CreateThread(function()
+	SetMapName('San Andreas')
+	SetGameType('Roleplay')
+end)
+
 RegisterNetEvent('esx:onPlayerJoined')
 AddEventHandler('esx:onPlayerJoined', function()
 	if not ESX.Players[source] then
@@ -8,17 +22,11 @@ end)
 function onPlayerJoined(playerId)
 	local identifier
 
-	
-	for k,v in ipairs(GetPlayerIdentifiers(playerId)) do
-        if string.match(v, 'steam:') then
-            identifier = v
-            break
-        end
-    end
+	identifier = GetPlayerIdentifiers(playerId)[1]
 
 	if identifier then
 		if ESX.GetPlayerFromIdentifier(identifier) then
-			DropPlayer(playerId, ('เกิดข้อผิดพลาดขึ้น !\nรหัสข้อผิดพลาด : identifier-active-ingame\n\nข้อผิดพลาดนี้เกิดจากผู้เล่นในเซิฟเวอร์ใช้บัญชี Steam เดียวกันกับคุณ ตรวจสอบให้แน่ใจว่าคุณไม่ได้ใช้บัญชี Steam เดียวกัน \n\nSteam : %s'):format(identifier))
+			DropPlayer(playerId, ('there was an error loading your character!\nError code: identifier-active-ingame\n\nThis error is caused by a player on this server who has the same identifier as you have. Make sure you are not playing on the same Rockstar account.\n\nYour Rockstar identifier: %s'):format(identifier))
 		else
 			MySQL.Async.fetchScalar('SELECT 1 FROM users WHERE identifier = @identifier', {
 				['@identifier'] = identifier
@@ -26,6 +34,7 @@ function onPlayerJoined(playerId)
 				if result then
 					loadESXPlayer(identifier, playerId)
 				else
+					local identifiers = GetPlayerIdentifiers(playerId)[1]
 					local accounts = {}
 
 					for account,money in pairs(Config.StartingAccountMoney) do
@@ -38,12 +47,11 @@ function onPlayerJoined(playerId)
 					}, function(rowsChanged)
 						loadESXPlayer(identifier, playerId)
 					end)
-
 				end
 			end)
 		end
 	else
-		DropPlayer(playerId, 'เกิดข้อผิดพลาดขึ้น !\nรหัสข้อผิดพลาด : identifier-missing-ingame\n\nไม่พบการเชื่อมต่อกับ Steam กรุณาลองใหม่อีกครั้งหรือติดต่อแอดมิน')
+		DropPlayer(playerId, 'there was an error loading your character!\nError code: identifier-missing-ingame\n\nThe cause of this error is not known, your identifier could not be found. Please come back later or report this problem to the server administration team.')
 	end
 end
 
@@ -52,21 +60,17 @@ AddEventHandler('playerConnecting', function(name, setCallback, deferrals)
 	local playerId, identifier = source
 	Citizen.Wait(100)
 
-	for k,v in ipairs(GetPlayerIdentifiers(playerId)) do
-		if string.match(v, 'steam:') then
-			identifier = v
-			break
-		end
-	end
+	identifier = GetPlayerIdentifiers(playerId)[1]
+
 
 	if identifier then
 		if ESX.GetPlayerFromIdentifier(identifier) then
-			deferrals.done(('เกิดข้อผิดพลาดขึ้น !\nรหัสข้อผิดพลาด : identifier-active\n\nข้อผิดพลาดนี้เกิดจากผู้เล่นในเซิฟเวอร์ใช้บัญชี Steam เดียวกันกับคุณ ตรวจสอบให้แน่ใจว่าคุณไม่ได้ใช้บัญชี Steam เดียวกัน \n\nSteam : %s'):format(identifier))
+			deferrals.done(('There was an error loading your character!\nError code: identifier-active\n\nThis error is caused by a player on this server who has the same identifier as you have. Make sure you are not playing on the same Rockstar account.\n\nYour Rockstar identifier: %s'):format(identifier))
 		else
 			deferrals.done()
 		end
 	else
-		deferrals.done('เกิดข้อผิดพลาดขึ้น !\nรหัสข้อผิดพลาด : identifier-missing\n\nไม่พบการเชื่อมต่อกับ Steam กรุณาลองใหม่อีกครั้งหรือติดต่อแอดมิน')
+		deferrals.done('There was an error loading your character!\nError code: identifier-missing\n\nThe cause of this error is not known, your identifier could not be found. Please come back later or report this problem to the server administration team.')
 	end
 end)
 
@@ -80,6 +84,7 @@ function loadESXPlayer(identifier, playerId)
 		job = {},
 		loadout = {},
 		playerName = GetPlayerName(playerId),
+		weight = 0
 	}
 
 	table.insert(tasks, function(cb)
@@ -110,7 +115,7 @@ function loadESXPlayer(identifier, playerId)
 			if ESX.DoesJobExist(job, grade) then
 				jobObject, gradeObject = ESX.Jobs[job], ESX.Jobs[job].grades[grade]
 			else
-				print(('[^2SupSibz.Base^7] [^3WARNING^7] Ignoring invalid job for %s [job: %s, grade: %s]'):format(identifier, job, grade))
+				print(('[es_extended] [^3WARNING^7] Ignoring invalid job for %s [job: %s, grade: %s]'):format(identifier, job, grade))
 				job, grade = 'unemployed', '0'
 				jobObject, gradeObject = ESX.Jobs[job], ESX.Jobs[job].grades[grade]
 			end
@@ -140,18 +145,20 @@ function loadESXPlayer(identifier, playerId)
 					if item then
 						foundItems[name] = count
 					else
-						print(('[^2SupSibz.Base^7] [^3WARNING^7] Ignoring invalid item "%s" for "%s"'):format(name, identifier))
+						print(('[es_extended] [^3WARNING^7] Ignoring invalid item "%s" for "%s"'):format(name, identifier))
 					end
 				end
 			end
 
 			for name,item in pairs(ESX.Items) do
 				local count = foundItems[name] or 0
+				-- if count > 0 then userData.weight = userData.weight + (item.weight * count) end
 
 				table.insert(userData.inventory, {
 					name = name,
 					count = count,
 					label = item.label,
+					-- weight = item.weight,
 					limit = item.limit,
 					usable = ESX.UsableItemsCallbacks[name] ~= nil,
 					rare = item.rare,
@@ -196,7 +203,7 @@ function loadESXPlayer(identifier, playerId)
 			if result[1].position and result[1].position ~= '' then
 				userData.coords = json.decode(result[1].position)
 			else
-				print('[^2SupSibz.Base^7] [^3WARNING^7] Column "position" in "users" table is missing required default value. Using backup coords, fix your database.')
+				print('[es_extended] [^3WARNING^7] Column "position" in "users" table is missing required default value. Using backup coords, fix your database.')
 				userData.coords = {x = -269.4, y = -955.3, z = 31.2, heading = 205.8}
 			end
 
@@ -216,21 +223,21 @@ function loadESXPlayer(identifier, playerId)
 			inventory = xPlayer.getInventory(),
 			job = xPlayer.getJob(),
 			loadout = xPlayer.getLoadout(),
+			-- maxWeight = xPlayer.getMaxWeight(),
 			money = xPlayer.getMoney()
 		})
 
-		xPlayer.triggerEvent('esx:createMissingPickups', ESX.Pickups)
+		-- xPlayer.triggerEvent('esx:createMissingPickups', ESX.Pickups)
 		xPlayer.triggerEvent('esx:registerSuggestions', ESX.RegisteredCommands)
-		--print(('[SupSibz.Base] [^2INFO^7] A player with name "%s^7" has connected to the server with assigned player id %s'):format(xPlayer.getName(), playerId))
+		print(('[^2INFO^0] Player ^5"%s" ^0has connected to the server. ID: ^5%s^7'):format(xPlayer.getName(), playerId))
 	end)
-	
 end
 
 AddEventHandler('chatMessage', function(playerId, author, message)
 	if message:sub(1, 1) == '/' and playerId > 0 then
 		CancelEvent()
-		local commandName = message:sub(1):gmatch("%w+")()
-		TriggerClientEvent('chat:addMessage', playerId, {args = {'^1SYSTEM', _U('commanderror_invalidcommand', commandName)}})
+		-- local commandName = message:sub(1):gmatch("%w+")()
+		-- TriggerClientEvent('chat:addMessage', playerId, {args = {'^1SYSTEM', _U('commanderror_invalidcommand', commandName)}})
 	end
 end)
 
@@ -244,27 +251,15 @@ AddEventHandler('playerDropped', function(reason)
 		ESX.SavePlayer(xPlayer, function()
 			ESX.Players[playerId] = nil
 		end)
-		
-		MySQL.Async.execute('UPDATE users SET `name` = @name WHERE `identifier` = @identifier', {
-			['@identifier'] = xPlayer.identifier,
-			['@name'] = GetPlayerName(playerId)
-		})
 	end
 end)
 
 RegisterNetEvent('esx:updateCoords')
 AddEventHandler('esx:updateCoords', function(coords)
-	--local xPlayer = ESX.GetPlayerFromId(source)
---
-	--if xPlayer then
-	--	xPlayer.updateCoords(coords)
-	--end
 	local xPlayer = ESX.GetPlayerFromId(source)
-	local playerCoords = GetEntityCoords(GetPlayerPed(source))
-	local playerHeading = ESX.Math.Round(GetEntityHeading(GetPlayerPed(source)), 1)
-	local formattedCoords = {x = ESX.Math.Round(playerCoords.x, 1), y = ESX.Math.Round(playerCoords.y, 1), z = ESX.Math.Round(playerCoords.z, 1), heading = playerHeading}
+
 	if xPlayer then
-		xPlayer.updateCoords(formattedCoords)
+		xPlayer.updateCoords(coords)
 	end
 end)
 
@@ -285,77 +280,87 @@ AddEventHandler('esx:giveInventoryItem', function(target, type, itemName, itemCo
 
 	if type == 'item_standard' then
 		local sourceItem = sourceXPlayer.getInventoryItem(itemName)
-		local targetItem = targetXPlayer.getInventoryItem(itemName)
+		local targetItem    = targetXPlayer.getInventoryItem(itemName)
 
 		if itemCount > 0 and sourceItem.count >= itemCount then
-			-- if targetXPlayer.canCarryItem(itemName, itemCount) then
+
 			if targetItem.limit ~= -1 and (targetItem.count + itemCount) > targetItem.limit then
-				
-
-				-- local sourceItemBalance    = sourceXPlayer.getInventoryItem(itemName).count
-				-- local targetItemBalance    = targetXPlayer.getInventoryItem(itemName).count
-
-				--local sendToDiscord = ''.. sourceXPlayer.name .. ' ส่ง ' .. ESX.GetItemLabel(itemName) .. ' ให้กับ ' .. targetXPlayer.name .. ' จำนวน ' .. ESX.Math.GroupDigits(itemCount) .. ''
-				--TriggerEvent('azael_discordlogs:sendToDiscord', 'GiveItem', sendToDiscord, sourceXPlayer.source, '^1')	
-								
-				-- Citizen.Wait(100)
-								
-				--local sendToDiscord2 = ''.. targetXPlayer.name .. ' ได้รับ ' .. ESX.GetItemLabel(itemName) .. ' จาก ' .. sourceXPlayer.name .. ' จำนวน ' .. ESX.Math.GroupDigits(itemCount) .. ''
-				--TriggerEvent('azael_discordlogs:sendToDiscord', 'GiveItem', sendToDiscord2, targetXPlayer.source, '^2')
-				TriggerClientEvent("pNotify:SendNotification", source, {
-					text = '<strong class="red-text">ล้มเหลว</strong> คุณ <strong class="blue-text">' .. targetXPlayer.name ..'</strong> ไม่สามารถรับไอเทมจากคุณได้เนื่องจากจำนวนเกินขีดจำกัด',
-					type = "information",
-					timeout = 5000,
-					layout = "centerRight",
+				TriggerClientEvent("pNotify:SendNotification", sourceItem, {
+					text = 'คุณ <strong class="red-text">' .. targetXPlayer.name ..'</strong> ไม่สามารถรับไอเทมจากคุณได้เนื่องจากไอเทมเกินขีดจำกัด',
+					type = "error",
+					timeout = 3000,
+					layout = "bottomCenter",
 					queue = "global"
 				})
 			else
 				sourceXPlayer.removeInventoryItem(itemName, itemCount)
-				targetXPlayer.addInventoryItem   (itemName, itemCount)
+				targetXPlayer.addInventoryItem(itemName, itemCount)
+				
+				--TriggerClientEvent("pNotify:SendNotification", sourceXPlayer, {
+				--	text = 'ส่ง <strong class="amber-text">'.. ESX.Items[itemName].label ..'</strong> จำนวน ' .. itemCount,
+				--	type = "success",
+				--	timeout = 3000,
+				--	layout = "bottomCenter",
+				--	queue = "global"
+				--})
+				--TriggerClientEvent("pNotify:SendNotification", targetXPlayer, {
+				--	text = 'ได้รับ <strong class="amber-text">'.. ESX.Items[itemName].label ..'</strong> จำนวน ' .. itemCount,
+				--	type = "success",
+				--	timeout = 3000,
+				--	layout = "bottomCenter",
+				--	queue = "global"
+				--})
+
+				local sendToDiscord = ''.. sourceXPlayer.name .. ' ส่ง ' .. ESX.GetItemLabel(itemName) .. ' ให้กับ ' .. targetXPlayer.name .. ' จำนวน ' .. ESX.Math.GroupDigits(itemCount) .. ''
+				TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'GiveItem', sendToDiscord, sourceXPlayer.source, '^1')	
+								
+				Citizen.Wait(100)
+								
+				local sendToDiscord2 = ''.. targetXPlayer.name .. ' ได้รับ ' .. ESX.GetItemLabel(itemName) .. ' จาก ' .. sourceXPlayer.name .. ' จำนวน ' .. ESX.Math.GroupDigits(itemCount) .. ''
+				TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'GiveItem', sendToDiscord2, targetXPlayer.source, '^2')
 			end
+
 		else
-			TriggerClientEvent("pNotify:SendNotification", source, {
-				text = '<strong class="red-text">ล้มเหลว</strong> ปริมาณที่ไม่ถูกต้อง',
-				type = "information",
-				timeout = 5000,
-				layout = "centerRight",
-				queue = "global"
-			})
+			sourceXPlayer.showNotification(_U('imp_invalid_amount'))
+		end
+
+	elseif type == 'item_money' then
+
+		if itemCount > 0 and sourceXPlayer.getMoney() >= itemCount then
+
+			sourceXPlayer.removeMoney(itemCount)
+			targetXPlayer.addMoney(itemCount)
+
+			--sourceXPlayer.showNotification(_U('gave_money', ESX.Math.GroupDigits(itemCount), Config.Accounts[itemName], targetXPlayer.name))
+			--targetXPlayer.showNotification(_U('received_money', ESX.Math.GroupDigits(itemCount), Config.Accounts[itemName], sourceXPlayer.name))
+
+			local sendToDiscord = ''.. sourceXPlayer.name .. ' ส่ง '.. Config.Accounts[itemName] ..' ให้กับ ' .. targetXPlayer.name .. ' จำนวน $' .. ESX.Math.GroupDigits(itemCount) .. ''
+			TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'GiveMoney', sendToDiscord, sourceXPlayer.source, '^1')	
+						
+			Citizen.Wait(100)
+						
+			local sendToDiscord2 = ''.. targetXPlayer.name .. ' ได้รับ '.. Config.Accounts[itemName] ..' จาก ' .. sourceXPlayer.name .. ' จำนวน $' .. ESX.Math.GroupDigits(itemCount) .. ''
+			TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'GiveMoney', sendToDiscord2, targetXPlayer.source, '^2')
+		else
+			sourceXPlayer.showNotification(_U('imp_invalid_amount'))
 		end
 	elseif type == 'item_account' then
 		if itemCount > 0 and sourceXPlayer.getAccount(itemName).money >= itemCount then
 			sourceXPlayer.removeAccountMoney(itemName, itemCount)
 			targetXPlayer.addAccountMoney   (itemName, itemCount)
 
-			--local sendToDiscord = ''.. sourceXPlayer.name .. ' ส่ง ' .. Config.Accounts[itemName] .. ' ให้กับ ' .. targetXPlayer.name .. ' จำนวน $' .. ESX.Math.GroupDigits(itemCount) .. ''
-			--TriggerEvent('azael_discordlogs:sendToDiscord', 'GiveMoney', sendToDiscord, sourceXPlayer.source, '^1')	
+			--sourceXPlayer.showNotification(_U('gave_account_money', ESX.Math.GroupDigits(itemCount), Config.Accounts[itemName], targetXPlayer.name))
+			--targetXPlayer.showNotification(_U('received_account_money', ESX.Math.GroupDigits(itemCount), Config.Accounts[itemName], sourceXPlayer.name))
+
+			local sendToDiscord = ''.. sourceXPlayer.name .. ' ส่ง '.. Config.Accounts[itemName] ..' ให้กับ ' .. targetXPlayer.name .. ' จำนวน $' .. ESX.Math.GroupDigits(itemCount) .. ''
+			TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'GiveMoney', sendToDiscord, sourceXPlayer.source, '^1')	
 						
-			-- Citizen.Wait(100)
+			Citizen.Wait(100)
 						
-			--local sendToDiscord2 = ''.. targetXPlayer.name .. ' ได้รับ ' .. Config.Accounts[itemName] .. ' จาก ' .. sourceXPlayer.name .. ' จำนวน $' .. ESX.Math.GroupDigits(itemCount) .. ''
-			--TriggerEvent('azael_discordlogs:sendToDiscord', 'GiveMoney', sendToDiscord2, targetXPlayer.source, '^2')
-			-- TriggerClientEvent("pNotify:SendNotification", source, { --แจ้งเตือนเรา _source = owned
-			-- 	text = '<strong class="blue-text">ช่วยเหลือ</strong> ส่ง <strong class="amber-text">เงินสด</strong> จำนวน ' .. itemCount..'',
-			-- 	type = "information",
-			-- 	timeout = 5000,
-			-- 	layout = "centerRight",
-			-- 	queue = "global"
-			-- })
-			-- TriggerClientEvent("pNotify:SendNotification", target, { --แจ้งเตือนเป้าหมาย target = Other players
-			-- 	text = '<strong class="blue-text">ช่วยเหลือ</strong> ได้รับ <strong class="amber-text">เงินสด</strong> จำนวน ' .. itemCount..'',
-			-- 	type = "information",
-			-- 	timeout = 5000,
-			-- 	layout = "centerRight",
-			-- 	queue = "global"
-			-- })
+			local sendToDiscord2 = ''.. targetXPlayer.name .. ' ได้รับ '.. Config.Accounts[itemName] ..' จาก ' .. sourceXPlayer.name .. ' จำนวน $' .. ESX.Math.GroupDigits(itemCount) .. ''
+			TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'GiveMoney', sendToDiscord2, targetXPlayer.source, '^2')
 		else
-			TriggerClientEvent("pNotify:SendNotification", source, {
-				text = '<strong class="red-text">ล้มเหลว</strong> ปริมาณที่ไม่ถูกต้อง',
-				type = "information",
-				timeout = 5000,
-				layout = "centerRight",
-				queue = "global"
-			})
+			sourceXPlayer.showNotification(_U('imp_invalid_amount'))
 		end
 	elseif type == 'item_weapon' then
 		if sourceXPlayer.hasWeapon(itemName) then
@@ -371,69 +376,33 @@ AddEventHandler('esx:giveInventoryItem', function(target, type, itemName, itemCo
 
 				if weaponObject.ammo and itemCount > 0 then
 					local ammoLabel = weaponObject.ammo.label
-
-					TriggerClientEvent("pNotify:SendNotification", source, {
-						text = '<strong class="blue-text">ช่วยเหลือ</strong> ส่ง <strong class="amber-text">'.. weaponLabel ..'</strong> (กระสุน จำนวน ' .. itemCount ..')',
-						type = "information",
-						timeout = 5000,
-						layout = "centerRight",
-						queue = "global"
-					})
-					TriggerClientEvent("pNotify:SendNotification", target, {
-						text = '<strong class="blue-text">ช่วยเหลือ</strong> ได้รับ <strong class="amber-text">'.. weaponLabel ..'</strong> (กระสุน จำนวน ' .. itemCount ..')',
-						type = "information",
-						timeout = 5000,
-						layout = "centerRight",
-						queue = "global"
-					})
+					--sourceXPlayer.showNotification(_U('gave_weapon_withammo', weaponLabel, itemCount, ammoLabel, targetXPlayer.name))
+					--targetXPlayer.showNotification(_U('received_weapon_withammo', weaponLabel, itemCount, ammoLabel, sourceXPlayer.name))
 				else
-					TriggerClientEvent("pNotify:SendNotification", source, {
-						text = '<strong class="blue-text">ช่วยเหลือ</strong> ส่ง <strong class="amber-text">'.. weaponLabel ..'</strong>',
-						type = "information",
-						timeout = 5000,
-						layout = "centerRight",
-						queue = "global"
-					})
-					TriggerClientEvent("pNotify:SendNotification", target, {
-						text = '<strong class="blue-text">ช่วยเหลือ</strong> ได้รับ <strong class="amber-text">'.. weaponLabel ..'</strong>',
-						type = "information",
-						timeout = 5000,
-						layout = "centerRight",
-						queue = "global"
-					})
+					--sourceXPlayer.showNotification(_U('gave_weapon', weaponLabel, targetXPlayer.name))
+					--targetXPlayer.showNotification(_U('received_weapon', weaponLabel, sourceXPlayer.name))
 				end
-				--[[if weaponObject.ammo and itemCount > 0 then
-					local sendToDiscord = ''.. sourceXPlayer.name .. ' ส่ง '.. weaponLabel ..' และ ' .. weaponObject.ammo.label .. ' จำนวน ' .. ESX.Math.GroupDigits(itemCount) .. ' ให้กับ ' .. targetXPlayer.name .. ''
-					TriggerEvent('azael_discordlogs:sendToDiscord', 'GiveWeapon', sendToDiscord, sourceXPlayer.source, '^1')	
+
+				if weaponObject.ammo and itemCount > 0 then
+					local sendToDiscord = ''.. sourceXPlayer.name .. ' ส่ง '.. weaponLabel ..' และ กระสุน จำนวน ' .. ESX.Math.GroupDigits(itemCount) .. ' ให้กับ ' .. targetXPlayer.name .. ''
+					TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'GiveWeapon', sendToDiscord, sourceXPlayer.source, '^1')	
 						
 					Citizen.Wait(100)
 						
-					local sendToDiscord2 = ''.. targetXPlayer.name .. ' ได้รับ '.. weaponLabel ..' และ ' .. weaponObject.ammo.label .. ' จำนวน ' .. ESX.Math.GroupDigits(itemCount) .. ' จาก ' .. sourceXPlayer.name .. ''
-					TriggerEvent('azael_discordlogs:sendToDiscord', 'GiveWeapon', sendToDiscord2, targetXPlayer.source, '^2')
+					local sendToDiscord2 = ''.. targetXPlayer.name .. ' ได้รับ '.. weaponLabel ..' และ กระสุน จำนวน ' .. ESX.Math.GroupDigits(itemCount) .. ' จาก ' .. sourceXPlayer.name .. ''
+					TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'GiveWeapon', sendToDiscord2, targetXPlayer.source, '^2')
 				else
 					local sendToDiscord = ''.. sourceXPlayer.name .. ' ส่ง '.. weaponLabel ..' ให้กับ ' .. targetXPlayer.name .. ''
-					TriggerEvent('azael_discordlogs:sendToDiscord', 'GiveWeapon', sendToDiscord, sourceXPlayer.source, '^1')	
+					TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'GiveWeapon', sendToDiscord, sourceXPlayer.source, '^1')	
 						
 					Citizen.Wait(100)
 						
 					local sendToDiscord2 = ''.. targetXPlayer.name .. ' ได้รับ '.. weaponLabel ..' จาก ' .. sourceXPlayer.name .. ''
-					TriggerEvent('azael_discordlogs:sendToDiscord', 'GiveWeapon', sendToDiscord2, targetXPlayer.source, '^2')
-				end]]
+					TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'GiveWeapon', sendToDiscord2, targetXPlayer.source, '^2')
+				end
 			else
-				TriggerClientEvent("pNotify:SendNotification", source, {
-					text = '<strong class="red-text">ล้มเหลว</strong> ผู้เล่นมีอาวุธอยู่แล้ว',
-					type = "information",
-					timeout = 5000,
-					layout = "centerRight",
-					queue = "global"
-				})
-				TriggerClientEvent("pNotify:SendNotification", target, {
-					text = '<strong class="red-text">ล้มเหลว</strong> คุณมีอาวุธอยู่แล้ว',
-					type = "information",
-					timeout = 5000,
-					layout = "centerRight",
-					queue = "global"
-				})
+				sourceXPlayer.showNotification(_U('gave_weapon_hasalready', targetXPlayer.name, weaponLabel))
+				targetXPlayer.showNotification(_U('received_weapon_hasalready', sourceXPlayer.name, weaponLabel))
 			end
 		end
 	elseif type == 'item_ammo' then
@@ -450,16 +419,16 @@ AddEventHandler('esx:giveInventoryItem', function(target, type, itemName, itemCo
 						sourceXPlayer.removeWeaponAmmo(itemName, itemCount)
 						targetXPlayer.addWeaponAmmo(itemName, itemCount)
 
-						sourceXPlayer.showNotification(_U('gave_weapon_ammo', itemCount, ammoLabel, weapon.label, targetXPlayer.name))
-						targetXPlayer.showNotification(_U('received_weapon_ammo', itemCount, ammoLabel, weapon.label, sourceXPlayer.name))
+						--sourceXPlayer.showNotification(_U('gave_weapon_ammo', itemCount, ammoLabel, weapon.label, targetXPlayer.name))
+						--targetXPlayer.showNotification(_U('received_weapon_ammo', itemCount, ammoLabel, weapon.label, sourceXPlayer.name))
 
-						--local sendToDiscord = ''.. sourceXPlayer.name .. ' ส่ง '.. ammoLabel ..' ของ ' .. weapon.label .. ' จำนวน ' .. ESX.Math.GroupDigits(itemCount) .. ' ให้กับ ' .. targetXPlayer.name .. ''
-						--TriggerEvent('azael_discordlogs:sendToDiscord', 'GiveAmmo', sendToDiscord, sourceXPlayer.source, '^1')	
+						local sendToDiscord = ''.. sourceXPlayer.name .. ' ส่ง กระสุน ของ ' .. weapon.label .. ' จำนวน ' .. ESX.Math.GroupDigits(itemCount) .. ' ให้กับ ' .. targetXPlayer.name .. ''
+						TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'GiveAmmo', sendToDiscord, sourceXPlayer.source, '^1')	
 							
 						Citizen.Wait(100)
 							
-						--local sendToDiscord2 = ''.. targetXPlayer.name .. ' ได้รับ '.. ammoLabel ..' ของ ' .. weapon.label .. '  จำนวน ' .. ESX.Math.GroupDigits(itemCount) .. ' จาก ' .. sourceXPlayer.name .. ''
-						--TriggerEvent('azael_discordlogs:sendToDiscord', 'GiveAmmo', sendToDiscord2, targetXPlayer.source, '^2')
+						local sendToDiscord2 = ''.. targetXPlayer.name .. ' ได้รับ กระสุน ของ ' .. weapon.label .. ' จำนวน ' .. ESX.Math.GroupDigits(itemCount) .. ' จาก ' .. sourceXPlayer.name .. ''
+						TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'GiveAmmo', sendToDiscord2, targetXPlayer.source, '^2')
 					end
 				end
 			else
@@ -477,74 +446,38 @@ AddEventHandler('esx:removeInventoryItem', function(type, itemName, itemCount)
 
 	if type == 'item_standard' then
 		if itemCount == nil or itemCount < 1 then
-			
-			TriggerClientEvent("pNotify:SendNotification", source, {
-				text = '<strong class="red-text">ล้มเหลว</strong> ปริมาณที่ไม่ถูกต้อง',
-				type = "information",
-				timeout = 5000,
-				layout = "centerRight",
-				queue = "global"
-			})
+			xPlayer.showNotification(_U('imp_invalid_quantity'))
 		else
 			local xItem = xPlayer.getInventoryItem(itemName)
 
 			if (itemCount > xItem.count or xItem.count < 1) then
-				
-				TriggerClientEvent("pNotify:SendNotification", source, {
-					text = '<strong class="red-text">ล้มเหลว</strong> ปริมาณที่ไม่ถูกต้อง',
-					type = "information",
-					timeout = 5000,
-					layout = "centerRight",
-					queue = "global"
-				})
+				xPlayer.showNotification(_U('imp_invalid_quantity'))
 			else
 				xPlayer.removeInventoryItem(itemName, itemCount)
+				-- local pickupLabel = ('~y~%s~s~ [~b~%s~s~]'):format(xItem.label, itemCount)
+				-- ESX.CreatePickup('item_standard', itemName, itemCount, pickupLabel, playerId)
+				-- xPlayer.showNotification(_U('threw_standard', itemCount, xItem.label))
 
-				TriggerClientEvent("pNotify:SendNotification", source, {
-					text = '<strong class="green-text">ช่วยเหลือ</strong> คุณโยน <strong class="green-text">'..xItem.label..'</strong><strong class="yellow-text"> ['..itemCount..']</strong> ลงพื้น',
-					type = "information",
-					timeout = 5000,
-					layout = "centerRight",
-					queue = "global"
-				})
-				--local sendToDiscord = ''.. xPlayer.name .. ' ทิ้ง '.. xItem.label ..' จำนวน ' .. ESX.Math.GroupDigits(itemCount) .. ''
-				--TriggerEvent('azael_discordlogs:sendToDiscord', 'RemoveItem', sendToDiscord, xPlayer.source, '^1')
+				local sendToDiscord = ''.. xPlayer.name .. ' ทิ้ง '.. xItem.label ..' จำนวน ' .. ESX.Math.GroupDigits(itemCount) .. ''
+				TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'RemoveItem', sendToDiscord, xPlayer.source, '^1')
 			end
 		end
 	elseif type == 'item_account' then
 		if itemCount == nil or itemCount < 1 then
-			
-			TriggerClientEvent("pNotify:SendNotification", source, {
-				text = '<strong class="red-text">ล้มเหลว</strong> ปริมาณที่ไม่ถูกต้อง',
-				type = "information",
-				timeout = 5000,
-				layout = "centerRight",
-				queue = "global"
-			})
+			xPlayer.showNotification(_U('imp_invalid_amount'))
 		else
 			local account = xPlayer.getAccount(itemName)
 
 			if (itemCount > account.money or account.money < 1) then
-				
-				TriggerClientEvent("pNotify:SendNotification", source, {
-					text = '<strong class="red-text">ล้มเหลว</strong> ปริมาณที่ไม่ถูกต้อง',
-					type = "information",
-					timeout = 5000,
-					layout = "centerRight",
-					queue = "global"
-				})
+				xPlayer.showNotification(_U('imp_invalid_amount'))
 			else
 				xPlayer.removeAccountMoney(itemName, itemCount)
-				
-				TriggerClientEvent("pNotify:SendNotification", source, {
-					text = '<strong class="green-text">ช่วยเหลือ</strong>คุณโยน <strong class="green-text">'..string.lower(account.label)..' <strong class="yellow-text">['..ESX.Math.GroupDigits(itemCount)..']</strong> ลงพื้น<center>',
-					type = "information",
-					timeout = 5000,
-					layout = "centerRight",
-					queue = "global"
-				})
-				--local sendToDiscord = ''.. xPlayer.name .. ' ทิ้ง ' .. Config.Accounts[itemName] .. ' จำนวน $' .. ESX.Math.GroupDigits(itemCount) .. ''
-				--TriggerEvent('azael_discordlogs:sendToDiscord', 'RemoveMoney', sendToDiscord, xPlayer.source, '^1')
+				-- local pickupLabel = ('~y~%s~s~ [~g~%s~s~]'):format(account.label, _U('locale_currency', ESX.Math.GroupDigits(itemCount)))
+				-- ESX.CreatePickup('item_account', itemName, itemCount, pickupLabel, playerId)
+				-- xPlayer.showNotification(_U('threw_account', ESX.Math.GroupDigits(itemCount), string.lower(account.label)))
+
+				local sendToDiscord = ''.. xPlayer.name .. ' ทิ้ง ' .. account.label .. ' จำนวน $' .. ESX.Math.GroupDigits(itemCount) .. ''
+				TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'RemoveMoney', sendToDiscord, xPlayer.source, '^1')
 			end
 		end
 	elseif type == 'item_weapon' then
@@ -558,18 +491,22 @@ AddEventHandler('esx:removeInventoryItem', function(type, itemName, itemCount)
 
 			if weaponObject.ammo and weapon.ammo > 0 then
 				local ammoLabel = weaponObject.ammo.label
-				pickupLabel = ('~y~%s~s~ [~g~%s~s~ %s]'):format(weapon.label, weapon.ammo, ammoLabel)
-				xPlayer.showNotification(_U('threw_weapon_ammo', weapon.label, weapon.ammo, ammoLabel))
+				-- pickupLabel = ('~y~%s~s~ [~g~%s~s~ %s]'):format(weapon.label, weapon.ammo, ammoLabel)
+				-- xPlayer.showNotification(_U('threw_weapon_ammo', weapon.label, weapon.ammo, ammoLabel))
 			else
-				pickupLabel = ('~y~%s~s~'):format(weapon.label)
+				-- pickupLabel = ('~y~%s~s~'):format(weapon.label)
+				-- xPlayer.showNotification(_U('threw_weapon', weapon.label))
 			end
-			--if weaponObject.ammo and weapon.ammo > 0 then
-				--local sendToDiscord = ''.. xPlayer.name .. ' ทิ้ง ' .. weapon.label .. ' และ ' .. weaponObject.ammo.label .. ' จำนวน ' .. ESX.Math.GroupDigits(weapon.ammo) .. ''
-				--TriggerEvent('azael_discordlogs:sendToDiscord', 'RemoveWeapon', sendToDiscord, xPlayer.source, '^1')
-			--else
-				--local sendToDiscord = ''.. xPlayer.name .. ' ทิ้ง ' .. weapon.label .. ''
-				--TriggerEvent('azael_discordlogs:sendToDiscord', 'RemoveWeapon', sendToDiscord, xPlayer.source, '^1')
-			--end
+
+			-- ESX.CreatePickup('item_weapon', itemName, weapon.ammo, pickupLabel, playerId, components, weapon.tintIndex)
+
+			if weaponObject.ammo and weapon.ammo > 0 then
+				local sendToDiscord = ''.. xPlayer.name .. ' ทิ้ง ' .. weapon.label .. ' และ กระสุน จำนวน ' .. ESX.Math.GroupDigits(weapon.ammo) .. ''
+				TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'RemoveWeapon', sendToDiscord, xPlayer.source, '^1')
+			else
+				local sendToDiscord = ''.. xPlayer.name .. ' ทิ้ง ' .. weapon.label .. ''
+				TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'RemoveWeapon', sendToDiscord, xPlayer.source, '^1')
+			end
 		end
 	end
 end)
@@ -581,14 +518,11 @@ AddEventHandler('esx:useItem', function(itemName)
 
 	if count > 0 then
 		ESX.UseItem(source, itemName)
+
+		-- local sendToDiscord = ''.. xPlayer.name .. ' ใช้ไอเทม ' .. ESX.GetItemLabel(itemName) .. ' จำนวน 1'
+		-- TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'UseItem', sendToDiscord, xPlayer.source, '^3')
 	else
-		TriggerClientEvent("pNotify:SendNotification", source, {
-			text = '<strong class="red-text">ล้มเหลว</strong> การกระทำเป็นไปไม่ได้',
-			type = "information",
-			timeout = 5000,
-			layout = "centerRight",
-			queue = "global"
-		})
+		xPlayer.showNotification(_U('act_imp'))
 	end
 end)
 
@@ -600,38 +534,24 @@ AddEventHandler('esx:onPickup', function(pickupId)
 		if pickup.type == 'item_standard' then
 			if xPlayer.canCarryItem(pickup.name, pickup.count) then
 				xPlayer.addInventoryItem(pickup.name, pickup.count)
-				success = true
-				--local sendToDiscord = ''.. xPlayer.name .. ' เก็บ ' .. ESX.GetItemLabel(pickup.name) .. ' จำนวน ' .. ESX.Math.GroupDigits(pickup.count) ..''
-				--TriggerEvent('azael_discordlogs:sendToDiscord', 'PickupItem', sendToDiscord, xPlayer.source, '^2')
+				-- success = true
+
+				local sendToDiscord = ''.. xPlayer.name .. ' เก็บ ' .. ESX.GetItemLabel(pickup.name) .. ' จำนวน ' .. ESX.Math.GroupDigits(pickup.count) ..''
+				TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'PickupItem', sendToDiscord, xPlayer.source, '^2')
 			else
-				--xPlayer.showNotification(_U('threw_cannot_pickup'))
-				TriggerClientEvent('pNotify:SendNotification', source, {
-					text = "เนื่องจากกระเป๋าเต็ม คุณไม่สามารถเก็บได้อีก",
-					type = "error",
-					queue = "center",
-					timeout = 5000,
-					layout = "bottomCenter"
-				})
+				-- xPlayer.showNotification(_U('threw_cannot_pickup'))
 			end
 		elseif pickup.type == 'item_account' then
-			success = true
+			-- success = true
 			xPlayer.addAccountMoney(pickup.name, pickup.count)
 
-			--local sendToDiscord = ''.. xPlayer.name .. ' เก็บ ' .. Config.Accounts[pickup.name] .. ' จำนวน $' .. ESX.Math.GroupDigits(pickup.count) ..''
-			--TriggerEvent('azael_discordlogs:sendToDiscord', 'PickupMoney', sendToDiscord, xPlayer.source, '^2')
-
+			local sendToDiscord = ''.. xPlayer.name .. ' เก็บ ' .. Config.Accounts[pickup.name] .. ' จำนวน $' .. ESX.Math.GroupDigits(pickup.count) ..''
+			TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'PickupMoney', sendToDiscord, xPlayer.source, '^2')
 		elseif pickup.type == 'item_weapon' then
 			if xPlayer.hasWeapon(pickup.name) then
-
-				TriggerClientEvent('pNotify:SendNotification', source, {
-					text = "คุณมีอาวุธ " ..pickup.name.. " อยู่แล้ว",
-					type = "error",
-					queue = "center",
-					timeout = 5000,
-					layout = "bottomCenter"
-				})
+				-- xPlayer.showNotification(_U('threw_weapon_already'))
 			else
-				success = true
+				-- success = true
 				xPlayer.addWeapon(pickup.name, pickup.count)
 				xPlayer.setWeaponTint(pickup.name, pickup.tintIndex)
 
@@ -639,20 +559,20 @@ AddEventHandler('esx:onPickup', function(pickupId)
 					xPlayer.addWeaponComponent(pickup.name, v)
 				end
 
-				--if pickup.count > 0 then
-				--	local sendToDiscord = ''.. xPlayer.name .. ' เก็บ ' .. ESX.GetWeaponLabel(pickup.name) .. ' และ กระสุน จำนวน ' .. ESX.Math.GroupDigits(pickup.count) .. ''
-				--	TriggerEvent('azael_discordlogs:sendToDiscord', 'PickupWeapon', sendToDiscord, xPlayer.source, '^2')
-				--else
-				--	local sendToDiscord = ''.. xPlayer.name .. ' เก็บ ' .. ESX.GetWeaponLabel(pickup.name) .. ''
-				--	TriggerEvent('azael_discordlogs:sendToDiscord', 'PickupWeapon', sendToDiscord, xPlayer.source, '^2')
-				--end
+				if pickup.count > 0 then
+					local sendToDiscord = ''.. xPlayer.name .. ' ทิ้ง ' .. ESX.GetWeaponLabel(pickup.name) .. ' และ กระสุน จำนวน ' .. ESX.Math.GroupDigits(pickup.count) .. ''
+					TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'PickupWeapon', sendToDiscord, xPlayer.source, '^2')
+				else
+					local sendToDiscord = ''.. xPlayer.name .. ' ทิ้ง ' .. ESX.GetWeaponLabel(pickup.name) .. ''
+					TriggerEvent('azael_dc-serverlogs:sendToDiscord', 'PickupWeapon', sendToDiscord, xPlayer.source, '^2')
+				end
 			end
 		end
 
-		if success then
-			ESX.Pickups[pickupId] = nil
-			TriggerClientEvent('esx:removePickup', -1, pickupId)
-		end
+		-- if success then
+			-- ESX.Pickups[pickupId] = nil
+			-- TriggerClientEvent('esx:removePickup', -1, pickupId)
+		-- end
 	end
 end)
 
@@ -699,4 +619,4 @@ ESX.RegisterServerCallback('esx:getPlayerNames', function(source, cb, players)
 end)
 
 ESX.StartDBSync()
---ESX.StartPayCheck()
+ESX.StartPayCheck()

@@ -19,13 +19,14 @@ ESX.GetConfig = function()
 end
 
 ESX.GetWeapon = function(weaponName)
-	weaponName = string.upper(weaponName)
+    weaponName = string.upper(weaponName)
+    local weapons = ESX.GetWeaponList()
 
-	for k,v in ipairs(Config.Weapons) do
-		if v.name == weaponName then
-			return k, v
-		end
-	end
+    for i=1, #weapons, 1 do
+        if weapons[i].name == weaponName then
+            return i, weapons[i]
+        end
+    end
 end
 
 ESX.GetWeaponFromHash = function(weaponHash)

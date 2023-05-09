@@ -2,7 +2,7 @@ Citizen.CreateThread(function()
 	local isDead = false
 
 	while true do
-		Citizen.Wait(500)
+		Citizen.Wait(300)
 		local player = PlayerId()
 
 		if NetworkIsPlayerActive(player) then
